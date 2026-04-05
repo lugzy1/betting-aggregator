@@ -329,63 +329,73 @@ app.get("/api/fanduel-resolve", (req, res) => {
 const KALSHI_CATEGORIES = {
   politics: {
     label: "Politics",
+    kalshiCategories: ["Politics", "Government & Politics"],
     seriesTickers: ["KXPRESPARTY", "KXSENATE", "KXHOUSE", "KXPRESWIN"],
     fallbackUrl: "https://kalshi.com/category/politics",
-    searchTerms: ["president", "congress", "senate", "election", "governor", "political", "democrat", "republican", "trump", "biden"]
+    searchTerms: ["president", "congress", "senate", "election", "governor", "political", "democrat", "republican", "trump", "biden", "tariff", "impeach", "cabinet", "executive order", "supreme court", "scotus", "legislation", "bill", "veto", "shutdown"]
   },
   elections: {
     label: "Elections",
+    kalshiCategories: ["Elections"],
     seriesTickers: ["KXPRESPARTY", "KXPRESWIN", "KXSENATE", "KXHOUSE", "KXGOV"],
     fallbackUrl: "https://kalshi.com/category/elections",
-    searchTerms: ["election", "vote", "ballot", "primary", "electoral", "midterm", "2026", "2028", "runoff", "special election"]
+    searchTerms: ["election", "vote", "ballot", "primary", "electoral", "midterm", "2026", "2028", "runoff", "special election", "nominee", "candidate", "caucus", "swing state"]
   },
   crypto: {
     label: "Crypto",
-    seriesTickers: ["KXBTC", "KXETH", "KXBTCUSD", "KXETHUSD", "KXBTCD", "KXETHD"],
+    kalshiCategories: ["Crypto"],
+    seriesTickers: ["KXBTC", "KXETH", "KXBTCUSD", "KXETHUSD", "KXBTCD", "KXETHD", "KXSOL", "KXDOGE", "KXADA"],
     fallbackUrl: "https://kalshi.com/category/crypto",
-    searchTerms: ["bitcoin", "ethereum", "crypto", "btc", "eth", "solana"]
+    searchTerms: ["bitcoin", "ethereum", "crypto", "btc", "eth", "solana", "dogecoin", "xrp", "cardano", "blockchain"]
   },
   climate: {
     label: "Climate",
+    kalshiCategories: ["Climate", "Weather", "Climate and Weather"],
     seriesTickers: ["KXHIGHNY", "KXHIGHCHI", "KXHIGHLA", "KXHIGHMIA", "KXHURRICANE"],
     fallbackUrl: "https://kalshi.com/category/climate",
-    searchTerms: ["temperature", "hurricane", "weather", "climate", "wildfire", "rainfall"]
+    searchTerms: ["temperature", "hurricane", "weather", "climate", "wildfire", "rainfall", "drought", "flood", "storm", "tornado", "snowfall", "heat wave", "cold"]
   },
   economics: {
     label: "Economics",
+    kalshiCategories: ["Economics", "Economy", "Financial"],
     seriesTickers: ["KXFED", "KXCPI", "KXGDP", "KXUNRATE", "KXJOBS", "KXINFL", "KXRECESSION"],
     fallbackUrl: "https://kalshi.com/category/economics",
-    searchTerms: ["fed", "inflation", "gdp", "unemployment", "recession", "interest rate", "cpi", "jobs", "economic"]
+    searchTerms: ["fed", "inflation", "gdp", "unemployment", "recession", "interest rate", "cpi", "jobs", "economic", "fomc", "rate cut", "rate hike", "payroll", "consumer price"]
   },
   financials: {
     label: "Financials",
-    seriesTickers: ["KXSPY", "KXNAS", "KXDOW", "KXVIX", "KXSPX", "KXNDX"],
+    kalshiCategories: ["Financials", "Financial Markets"],
+    seriesTickers: ["KXSPY", "KXNAS", "KXDOW", "KXVIX", "KXSPX", "KXNDX", "KXQQQ", "KXIWM"],
     fallbackUrl: "https://kalshi.com/category/financials",
-    searchTerms: ["stock", "s&p", "nasdaq", "dow", "market", "index", "equity", "share price", "vix", "treasury", "yield", "bond"]
+    searchTerms: ["stock", "s&p", "nasdaq", "dow", "market", "index", "equity", "share price", "vix", "treasury", "yield", "bond", "s&p 500", "russell"]
   },
   companies: {
     label: "Companies",
+    kalshiCategories: ["Companies"],
     seriesTickers: ["KXAAPL", "KXGOOG", "KXMSFT", "KXTSLA", "KXAMZN", "KXNVDA", "KXMETA"],
     fallbackUrl: "https://kalshi.com/category/companies",
-    searchTerms: ["apple", "google", "microsoft", "tesla", "amazon", "nvidia", "meta", "earnings", "revenue", "ipo", "stock price", "market cap"]
+    searchTerms: ["apple", "google", "microsoft", "tesla", "amazon", "nvidia", "meta", "earnings", "revenue", "ipo", "stock price", "market cap", "ceo"]
   },
   techscience: {
     label: "Tech & Science",
+    kalshiCategories: ["Tech & Science", "Science", "Technology"],
     seriesTickers: ["KXAI", "KXSPACEX", "KXFDA"],
     fallbackUrl: "https://kalshi.com/category/tech-and-science",
-    searchTerms: ["ai", "artificial intelligence", "spacex", "nasa", "launch", "fda", "tech", "science", "robotics", "quantum", "regulation"]
+    searchTerms: ["ai", "artificial intelligence", "spacex", "nasa", "launch", "fda", "tech", "science", "robotics", "quantum", "regulation", "openai", "chatgpt", "gpt"]
   },
   culture: {
     label: "Culture",
+    kalshiCategories: ["Culture", "Entertainment"],
     seriesTickers: ["KXOSCARS", "KXGRAMMYS", "KXEMMYS"],
     fallbackUrl: "https://kalshi.com/category/culture",
-    searchTerms: ["oscars", "grammys", "emmys", "awards", "movie", "music", "entertainment"]
+    searchTerms: ["oscars", "grammys", "emmys", "awards", "movie", "music", "entertainment", "box office", "streaming", "netflix", "disney", "james bond", "super bowl halftime"]
   },
   mentions: {
     label: "Mentions",
+    kalshiCategories: ["Mentions"],
     seriesTickers: ["KXTRUMP", "KXELON", "KXBIDEN"],
     fallbackUrl: "https://kalshi.com/category/mentions",
-    searchTerms: ["mention", "tweet", "truth social", "speech", "press conference", "interview", "said", "statement"]
+    searchTerms: ["mention", "tweet", "truth social", "speech", "press conference", "interview", "said", "statement", "x post", "social media"]
   }
 };
 
@@ -406,6 +416,7 @@ app.get("/api/kalshi-category/:category", async (req, res) => {
 
   console.log(`[Kalshi-Cat] Fetching category: ${catConfig.label}`);
   const allEvents = [];
+  const existingTickers = new Set();
 
   // Strategy 1: Fetch by known series tickers
   for (const ticker of catConfig.seriesTickers) {
@@ -414,47 +425,55 @@ app.get("/api/kalshi-category/:category", async (req, res) => {
       const data = await fetchJson(url);
       const events = data?.events || [];
       console.log(`[Kalshi-Cat] ${ticker}: ${events.length} events`);
-      allEvents.push(...events);
+      for (const ev of events) {
+        if (!existingTickers.has(ev.event_ticker)) {
+          allEvents.push(ev);
+          existingTickers.add(ev.event_ticker);
+        }
+      }
     } catch (err) {
       console.warn(`[Kalshi-Cat] ${ticker} failed: ${err.message}`);
     }
   }
 
-  // Strategy 2: If we got few results, do paginated broad search
-  if (allEvents.length < 5) {
-    const terms = catConfig.searchTerms;
-    const existingTickers = new Set(allEvents.map(e => e.event_ticker));
-    let cursor = null;
-    let pages = 0;
-    const maxPages = 5; // up to 1000 events scanned
+  // Strategy 2: Paginated broad search — match by Kalshi's category field AND search terms
+  // Always run this (not just when <5) to discover events beyond hardcoded tickers
+  const terms = catConfig.searchTerms;
+  const kalshiCategoryNames = catConfig.kalshiCategories || [catConfig.label];
+  let cursor = null;
+  let pages = 0;
+  const maxPages = 8; // up to 1600 events scanned
 
-    while (pages < maxPages) {
-      try {
-        let url = `${KALSHI_API_BASE}/events?with_nested_markets=true&status=open&limit=200`;
-        if (cursor) url += `&cursor=${cursor}`;
-        const data = await fetchJson(url);
-        const events = data?.events || [];
-        if (events.length === 0) break;
+  while (pages < maxPages) {
+    try {
+      let url = `${KALSHI_API_BASE}/events?with_nested_markets=true&status=open&limit=200`;
+      if (cursor) url += `&cursor=${cursor}`;
+      const data = await fetchJson(url);
+      const events = data?.events || [];
+      if (events.length === 0) break;
 
-        const filtered = events.filter(ev => {
-          const text = [ev.title, ev.sub_title, ev.category, ev.event_ticker, ev.series_ticker].filter(Boolean).join(" ").toLowerCase();
-          return terms.some(term => text.includes(term));
-        });
-        for (const ev of filtered) {
-          if (!existingTickers.has(ev.event_ticker)) {
-            allEvents.push(ev);
-            existingTickers.add(ev.event_ticker);
-          }
+      const filtered = events.filter(ev => {
+        // Match by Kalshi's own category field
+        const evCat = (ev.category || "").toLowerCase();
+        if (kalshiCategoryNames.some(c => evCat === c.toLowerCase())) return true;
+        // Match by search terms in title/subtitle/ticker
+        const text = [ev.title, ev.sub_title, ev.event_ticker, ev.series_ticker].filter(Boolean).join(" ").toLowerCase();
+        return terms.some(term => text.includes(term));
+      });
+      for (const ev of filtered) {
+        if (!existingTickers.has(ev.event_ticker)) {
+          allEvents.push(ev);
+          existingTickers.add(ev.event_ticker);
         }
-        console.log(`[Kalshi-Cat] Broad page ${pages + 1}: ${filtered.length} matching from ${events.length} (total so far: ${allEvents.length})`);
-
-        cursor = data?.cursor || null;
-        if (!cursor) break;
-        pages++;
-      } catch (err) {
-        console.warn(`[Kalshi-Cat] Broad search page ${pages + 1} failed: ${err.message}`);
-        break;
       }
+      console.log(`[Kalshi-Cat] Broad page ${pages + 1}: ${filtered.length} matching from ${events.length} (total: ${allEvents.length})`);
+
+      cursor = data?.cursor || null;
+      if (!cursor) break;
+      pages++;
+    } catch (err) {
+      console.warn(`[Kalshi-Cat] Broad search page ${pages + 1} failed: ${err.message}`);
+      break;
     }
   }
 
@@ -670,7 +689,7 @@ app.get("/api/debug", async (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
-    service: "betting-aggregator-v21",
+    service: "betting-aggregator-v22",
     oddsApiKey: ODDS_API_KEY ? "configured" : "NOT SET",
     architecture: {
       kalshi: "Direct event links via Kalshi public API",
@@ -683,7 +702,7 @@ app.get("/api/health", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Betting aggregator v21 running on port ${PORT}`);
+  console.log(`Betting aggregator v22 running on port ${PORT}`);
   console.log(`ODDS_API_KEY: ${ODDS_API_KEY ? "configured ✓" : "NOT SET — add it in Render env vars"}`);
   console.log(`Debug: http://localhost:${PORT}/api/debug?sportKey=basketball_nba`);
 });
