@@ -74,7 +74,7 @@ async function fetchJson(url) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const resolverCache = new Map();
-const CACHE_TTL = 1000 * 60 * 120;
+const CACHE_TTL = 1000 * 60 * 30; // 30 min cache
 
 function cacheGet(key) {
   const entry = resolverCache.get(key);
@@ -420,30 +420,54 @@ app.get("/api/kalshi-category/:category", async (req, res) => {
     }
   }
 
-  // Strategy 2: If we got few results, try broader search with category param
+  // Strategy 2: If we got few results, do paginated broad search
   if (allEvents.length < 5) {
-    try {
-      const url = `${KALSHI_API_BASE}/events?with_nested_markets=true&status=open&limit=200`;
-      const data = await fetchJson(url);
-      const events = data?.events || [];
-      // Filter by search terms
-      const terms = catConfig.searchTerms;
-      const filtered = events.filter(ev => {
-        const text = [ev.title, ev.sub_title, ev.category, ev.event_ticker].filter(Boolean).join(" ").toLowerCase();
-        return terms.some(term => text.includes(term));
-      });
-      console.log(`[Kalshi-Cat] Broad search: ${filtered.length} matching from ${events.length} total`);
-      // Deduplicate by event_ticker
-      const existingTickers = new Set(allEvents.map(e => e.event_ticker));
-      for (const ev of filtered) {
-        if (!existingTickers.has(ev.event_ticker)) {
-          allEvents.push(ev);
-          existingTickers.add(ev.event_ticker);
+    const terms = catConfig.searchTerms;
+    const existingTickers = new Set(allEvents.map(e => e.event_ticker));
+    let cursor = null;
+    let pages = 0;
+    const maxPages = 5; // up to 1000 events scanned
+
+    while (pages < maxPages) {
+      try {
+        let url = `${KALSHI_API_BASE}/events?with_nested_markets=true&status=open&limit=200`;
+        if (cursor) url += `&cursor=${cursor}`;
+        const data = await fetchJson(url);
+        const events = data?.events || [];
+        if (events.length === 0) break;
+
+        const filtered = events.filter(ev => {
+          const text = [ev.title, ev.sub_title, ev.category, ev.event_ticker, ev.series_ticker].filter(Boolean).join(" ").toLowerCase();
+          return terms.some(term => text.includes(term));
+        });
+        for (const ev of filtered) {
+          if (!existingTickers.has(ev.event_ticker)) {
+            allEvents.push(ev);
+            existingTickers.add(ev.event_ticker);
+          }
         }
+        console.log(`[Kalshi-Cat] Broad page ${pages + 1}: ${filtered.length} matching from ${events.length} (total so far: ${allEvents.length})`);
+
+        cursor = data?.cursor || null;
+        if (!cursor) break;
+        pages++;
+      } catch (err) {
+        console.warn(`[Kalshi-Cat] Broad search page ${pages + 1} failed: ${err.message}`);
+        break;
       }
-    } catch (err) {
-      console.warn(`[Kalshi-Cat] Broad search failed: ${err.message}`);
     }
+  }
+
+  // Helper: extract price in cents from Kalshi market object
+  // Kalshi migrated to _dollars fields (March 2026); legacy integer fields removed
+  function priceCents(market, field) {
+    // Try _dollars field first (current API), convert to cents
+    const dVal = market[field + "_dollars"];
+    if (dVal != null && dVal !== 0) return Math.round(dVal * 100);
+    // Fallback to legacy integer field (pre-March 2026)
+    const iVal = market[field];
+    if (iVal != null && iVal !== 0) return iVal;
+    return null;
   }
 
   // Transform events into a clean response format
@@ -460,6 +484,10 @@ app.get("/api/kalshi-category/:category", async (req, res) => {
     // Determine if this is a multi-outcome event
     const isMultiOutcome = nestedMarkets.length > 1;
 
+    const yesPrice = priceCents(topMarket, "yes_ask");
+    const noPrice = priceCents(topMarket, "no_ask");
+    const lastPrice = priceCents(topMarket, "last_price");
+
     return {
       id: ev.event_ticker,
       title: ev.title || "Untitled",
@@ -468,24 +496,29 @@ app.get("/api/kalshi-category/:category", async (req, res) => {
       seriesTicker: ev.series_ticker || "",
       status: ev.status,
       isMultiOutcome,
-      yesPrice: topMarket.yes_ask != null ? topMarket.yes_ask : null,
-      noPrice: topMarket.no_ask != null ? topMarket.no_ask : null,
-      lastPrice: topMarket.last_price != null ? topMarket.last_price : null,
+      yesPrice: yesPrice ?? lastPrice,
+      noPrice: noPrice ?? (lastPrice != null ? 100 - lastPrice : null),
+      lastPrice,
       volume: topMarket.volume || 0,
       volume24h: topMarket.volume_24h || 0,
       openInterest: topMarket.open_interest || 0,
       expirationDate: topMarket.expiration_time || ev.expected_expiration_time || null,
       eventUrl,
       marketsCount: nestedMarkets.length,
-      allMarkets: nestedMarkets.map(m => ({
-        ticker: m.ticker,
-        title: m.title || m.subtitle || "",
-        yesPrice: m.yes_ask,
-        noPrice: m.no_ask,
-        lastPrice: m.last_price,
-        volume: m.volume,
-        volume24h: m.volume_24h,
-      }))
+      allMarkets: nestedMarkets.map(m => {
+        const yp = priceCents(m, "yes_ask");
+        const np = priceCents(m, "no_ask");
+        const lp = priceCents(m, "last_price");
+        return {
+          ticker: m.ticker,
+          title: m.title || m.subtitle || "",
+          yesPrice: yp ?? lp,
+          noPrice: np ?? (lp != null ? 100 - lp : null),
+          lastPrice: lp,
+          volume: m.volume || 0,
+          volume24h: m.volume_24h || 0,
+        };
+      })
     };
   });
 
@@ -513,6 +546,28 @@ app.get("/api/kalshi-categories", (req, res) => {
     seriesTickers: val.seriesTickers
   }));
   res.json({ ok: true, categories: cats });
+});
+
+// Raw Kalshi debug — shows actual field names from API response
+app.get("/api/kalshi-raw", async (req, res) => {
+  const ticker = req.query.series || "KXPRESPARTY";
+  try {
+    const url = `${KALSHI_API_BASE}/events?series_ticker=${ticker}&with_nested_markets=true&status=open&limit=2`;
+    const data = await fetchJson(url);
+    const events = data?.events || [];
+    const sample = events.slice(0, 1).map(ev => ({
+      event_ticker: ev.event_ticker,
+      title: ev.title,
+      category: ev.category,
+      series_ticker: ev.series_ticker,
+      market_count: (ev.markets || []).length,
+      first_market_keys: ev.markets?.[0] ? Object.keys(ev.markets[0]) : [],
+      first_market_raw: ev.markets?.[0] || null,
+    }));
+    return res.json({ ok: true, ticker, eventCount: events.length, sample });
+  } catch (err) {
+    return res.json({ ok: false, error: err.message });
+  }
 });
 
 // Debug endpoint
@@ -562,7 +617,7 @@ app.get("/api/debug", async (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
-    service: "betting-aggregator-v20",
+    service: "betting-aggregator-v21",
     oddsApiKey: ODDS_API_KEY ? "configured" : "NOT SET",
     architecture: {
       kalshi: "Direct event links via Kalshi public API",
@@ -575,7 +630,7 @@ app.get("/api/health", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Betting aggregator v20 running on port ${PORT}`);
+  console.log(`Betting aggregator v21 running on port ${PORT}`);
   console.log(`ODDS_API_KEY: ${ODDS_API_KEY ? "configured ✓" : "NOT SET — add it in Render env vars"}`);
   console.log(`Debug: http://localhost:${PORT}/api/debug?sportKey=basketball_nba`);
 });
