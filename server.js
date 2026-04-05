@@ -548,6 +548,59 @@ app.get("/api/kalshi-categories", (req, res) => {
   res.json({ ok: true, categories: cats });
 });
 
+// Discover all active series tickers + categories from Kalshi
+app.get("/api/kalshi-discover", async (req, res) => {
+  const seriesMap = {};
+  const categoryMap = {};
+  let cursor = null;
+  let pages = 0;
+  let totalEvents = 0;
+  const maxPages = parseInt(req.query.pages) || 10;
+
+  while (pages < maxPages) {
+    try {
+      let url = `${KALSHI_API_BASE}/events?with_nested_markets=false&status=open&limit=200`;
+      if (cursor) url += `&cursor=${cursor}`;
+      const data = await fetchJson(url);
+      const events = data?.events || [];
+      if (events.length === 0) break;
+      totalEvents += events.length;
+
+      for (const ev of events) {
+        const st = ev.series_ticker || "NONE";
+        const cat = ev.category || "Uncategorized";
+        if (!seriesMap[st]) seriesMap[st] = { count: 0, category: cat, sampleTitle: ev.title };
+        seriesMap[st].count++;
+        if (!categoryMap[cat]) categoryMap[cat] = { count: 0, series: new Set() };
+        categoryMap[cat].count++;
+        categoryMap[cat].series.add(st);
+      }
+
+      cursor = data?.cursor || null;
+      if (!cursor) break;
+      pages++;
+    } catch (err) {
+      break;
+    }
+  }
+
+  // Convert sets to arrays for JSON
+  for (const cat of Object.values(categoryMap)) {
+    cat.series = [...cat.series];
+  }
+
+  // Sort series by count descending
+  const sorted = Object.entries(seriesMap).sort((a, b) => b[1].count - a[1].count);
+
+  return res.json({
+    ok: true, totalEvents, pagesScanned: pages + 1,
+    categories: categoryMap,
+    topSeries: sorted.slice(0, 50).map(([ticker, info]) => ({
+      ticker, count: info.count, category: info.category, sample: info.sampleTitle
+    }))
+  });
+});
+
 // Raw Kalshi debug — shows actual field names from API response
 app.get("/api/kalshi-raw", async (req, res) => {
   const ticker = req.query.series || "KXPRESPARTY";
