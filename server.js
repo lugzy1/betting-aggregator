@@ -364,10 +364,10 @@ const KALSHI_CATEGORIES = {
   },
   financials: {
     label: "Financials",
-    kalshiCategories: ["Financials", "Financial Markets"],
+    kalshiCategories: ["Financials"],
     seriesTickers: ["KXSPY", "KXNAS", "KXDOW", "KXVIX", "KXSPX", "KXNDX", "KXQQQ", "KXIWM"],
     fallbackUrl: "https://kalshi.com/category/financials",
-    searchTerms: ["stock", "s&p", "nasdaq", "dow", "market", "index", "equity", "share price", "vix", "treasury", "yield", "bond", "s&p 500", "russell"]
+    searchTerms: ["stock", "s&p", "nasdaq", "dow", "market", "index", "equity", "share price", "vix", "treasury", "yield", "bond", "s&p 500", "russell", "oil", "crude", "brent", "wti", "gold", "silver", "agriculture", "wheat", "corn", "eur/usd", "forex", "euro", "dollar"]
   },
   companies: {
     label: "Companies",
@@ -398,6 +398,81 @@ const KALSHI_CATEGORIES = {
     searchTerms: ["mention", "tweet", "truth social", "speech", "press conference", "interview", "said", "statement", "x post", "social media"]
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Subcategory mapping system — derives subcategories from series tickers and title keywords
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SUBCATEGORY_RULES = {
+  politics: [
+    { name: "Trump", match: (ev) => /trump|maga|executive order|tariff|cabinet|attorney general|press sec/i.test(ev.title + ' ' + (ev.sub_title || '')) || /KXTRUMP/i.test(ev.series_ticker) },
+    { name: "Congress", match: (ev) => /congress|senate|house|speaker|legislation|bill|shutdown|funded|dhs|appropriat/i.test(ev.title + ' ' + (ev.sub_title || '')) || /SENATE|HOUSE|KXNEXTSPEAKER/i.test(ev.series_ticker) },
+    { name: "SCOTUS & Courts", match: (ev) => /scotus|supreme court|court|judicial|judge|ruling/i.test(ev.title + ' ' + (ev.sub_title || '')) },
+    { name: "International", match: (ev) => /iran|china|russia|ukraine|nato|eu |europe|israel|hormuz|nuclear deal|war|peace/i.test(ev.title + ' ' + (ev.sub_title || '')) },
+    { name: "Local", match: (ev) => /governor|mayor|state|local/i.test(ev.title + ' ' + (ev.sub_title || '')) && !/president/i.test(ev.title) },
+  ],
+  elections: [
+    { name: "Presidential", match: (ev) => /president/i.test(ev.title) || /KXPRES/i.test(ev.series_ticker) },
+    { name: "Senate", match: (ev) => /senate/i.test(ev.title) || /SENATE/i.test(ev.series_ticker) },
+    { name: "House", match: (ev) => /house|representative/i.test(ev.title) || /HOUSE/i.test(ev.series_ticker) },
+    { name: "Governor", match: (ev) => /governor/i.test(ev.title) || /GOV/i.test(ev.series_ticker) },
+    { name: "International", match: (ev) => /pope|uk |israel|eu |europe|canada|alberta/i.test(ev.title + ' ' + (ev.sub_title || '')) },
+  ],
+  crypto: [
+    { name: "Bitcoin", match: (ev) => /bitcoin|btc/i.test(ev.title) || /KXBTC/i.test(ev.series_ticker) },
+    { name: "Ethereum", match: (ev) => /ethereum|eth/i.test(ev.title) || /KXETH/i.test(ev.series_ticker) },
+    { name: "Solana", match: (ev) => /solana|sol/i.test(ev.title) || /KXSOL/i.test(ev.series_ticker) },
+    { name: "Other Crypto", match: (ev) => /doge|cardano|xrp|ada/i.test(ev.title) || /KXDOGE|KXADA|KXXRP/i.test(ev.series_ticker) },
+  ],
+  economics: [
+    { name: "Fed", match: (ev) => /fed |federal fund|fomc|rate cut|rate hike|fed chair/i.test(ev.title) || /KXFED/i.test(ev.series_ticker) },
+    { name: "Inflation & CPI", match: (ev) => /inflation|cpi|consumer price/i.test(ev.title) || /KXCPI|KXINFL/i.test(ev.series_ticker) },
+    { name: "GDP", match: (ev) => /gdp/i.test(ev.title) || /KXGDP/i.test(ev.series_ticker) },
+    { name: "Jobs", match: (ev) => /unemployment|jobs|payroll|labor/i.test(ev.title) || /KXUNRATE|KXJOBS/i.test(ev.series_ticker) },
+    { name: "Recession", match: (ev) => /recession/i.test(ev.title) || /KXRECESSION/i.test(ev.series_ticker) },
+  ],
+  financials: [
+    { name: "Oil & Gas", match: (ev) => /oil|crude|brent|wti|gas price|opec/i.test(ev.title) },
+    { name: "S&P", match: (ev) => /s&p|s\&p|spx|spy/i.test(ev.title) || /KXSPY|KXSPX/i.test(ev.series_ticker) },
+    { name: "Nasdaq", match: (ev) => /nasdaq|qqq|ndx/i.test(ev.title) || /KXQQQ|KXNAS|KXNDX/i.test(ev.series_ticker) },
+    { name: "Treasuries", match: (ev) => /treasury|treasuries|yield|bond/i.test(ev.title) },
+    { name: "EUR/USD", match: (ev) => /eur\/usd|euro.*dollar|forex/i.test(ev.title) },
+    { name: "Metals", match: (ev) => /gold|silver|platinum|metal/i.test(ev.title) || /KXGLD/i.test(ev.series_ticker) },
+    { name: "Agriculture", match: (ev) => /wheat|corn|soybean|agriculture|crop/i.test(ev.title) },
+  ],
+  climate: [
+    { name: "Temperature", match: (ev) => /temperature|high|heat|cold|warm/i.test(ev.title) || /KXHIGH/i.test(ev.series_ticker) },
+    { name: "Hurricane", match: (ev) => /hurricane|tropical|storm/i.test(ev.title) || /KXHURRICANE/i.test(ev.series_ticker) },
+  ],
+  techscience: [
+    { name: "AI", match: (ev) => /\bai\b|artificial intelligence|openai|chatgpt|gpt|llm|machine learning/i.test(ev.title) || /KXAI/i.test(ev.series_ticker) },
+    { name: "Space", match: (ev) => /spacex|nasa|launch|rocket|mars|moon|satellite/i.test(ev.title) || /KXSPACEX/i.test(ev.series_ticker) },
+    { name: "FDA", match: (ev) => /fda|drug|pharma|approv/i.test(ev.title) || /KXFDA/i.test(ev.series_ticker) },
+  ],
+  culture: [
+    { name: "Awards", match: (ev) => /oscar|grammy|emmy|award|golden globe/i.test(ev.title) },
+    { name: "Movies & TV", match: (ev) => /movie|film|box office|streaming|netflix|disney|series|show/i.test(ev.title) },
+    { name: "Music", match: (ev) => /music|album|song|concert|tour|billboard/i.test(ev.title) },
+  ],
+  companies: [
+    { name: "Tesla", match: (ev) => /tesla/i.test(ev.title) || /KXTSLA/i.test(ev.series_ticker) },
+    { name: "Apple", match: (ev) => /apple/i.test(ev.title) || /KXAAPL/i.test(ev.series_ticker) },
+    { name: "Google", match: (ev) => /google|alphabet/i.test(ev.title) || /KXGOOG/i.test(ev.series_ticker) },
+    { name: "Microsoft", match: (ev) => /microsoft/i.test(ev.title) || /KXMSFT/i.test(ev.series_ticker) },
+    { name: "Amazon", match: (ev) => /amazon/i.test(ev.title) || /KXAMZN/i.test(ev.series_ticker) },
+    { name: "Nvidia", match: (ev) => /nvidia/i.test(ev.title) || /KXNVDA/i.test(ev.series_ticker) },
+    { name: "Meta", match: (ev) => /\bmeta\b|facebook/i.test(ev.title) || /KXMETA/i.test(ev.series_ticker) },
+  ],
+};
+
+function deriveSubcategory(catKey, ev) {
+  const rules = SUBCATEGORY_RULES[catKey];
+  if (!rules) return "Other";
+  for (const rule of rules) {
+    if (rule.match(ev)) return rule.name;
+  }
+  return "Other";
+}
 
 // Fetch Kalshi events for a non-sports category
 app.get("/api/kalshi-category/:category", async (req, res) => {
@@ -512,6 +587,7 @@ app.get("/api/kalshi-category/:category", async (req, res) => {
       title: ev.title || "Untitled",
       subtitle: ev.sub_title || "",
       category: ev.category || catConfig.label,
+      subcategory: deriveSubcategory(catKey, ev),
       seriesTicker: ev.series_ticker || "",
       status: ev.status,
       isMultiOutcome,
@@ -544,11 +620,23 @@ app.get("/api/kalshi-category/:category", async (req, res) => {
   // Sort by volume descending
   markets.sort((a, b) => (b.volume24h + b.volume) - (a.volume24h + a.volume));
 
+  // Build subcategory summary
+  const subcategoryCounts = {};
+  for (const m of markets) {
+    const sub = m.subcategory || "Other";
+    if (!subcategoryCounts[sub]) subcategoryCounts[sub] = 0;
+    subcategoryCounts[sub]++;
+  }
+  const subcategories = Object.entries(subcategoryCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
   const result = {
     ok: true,
     category: catConfig.label,
     count: markets.length,
     fallbackUrl: catConfig.fallbackUrl,
+    subcategories,
     markets
   };
 
@@ -689,7 +777,7 @@ app.get("/api/debug", async (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
-    service: "betting-aggregator-v22",
+    service: "betting-aggregator-v23",
     oddsApiKey: ODDS_API_KEY ? "configured" : "NOT SET",
     architecture: {
       kalshi: "Direct event links via Kalshi public API",
@@ -700,9 +788,15 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+app.get("/api/cache-clear", (req, res) => {
+  const count = resolverCache.size;
+  resolverCache.clear();
+  res.json({ ok: true, cleared: count });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Betting aggregator v22 running on port ${PORT}`);
+  console.log(`Betting aggregator v23 running on port ${PORT}`);
   console.log(`ODDS_API_KEY: ${ODDS_API_KEY ? "configured ✓" : "NOT SET — add it in Render env vars"}`);
   console.log(`Debug: http://localhost:${PORT}/api/debug?sportKey=basketball_nba`);
 });
